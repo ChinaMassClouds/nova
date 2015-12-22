@@ -570,12 +570,12 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def suspend(self, context, instance):
+    def suspend(self, instance):
         """suspend the specified instance.
 
-        :param context: the context for the suspend
         :param instance: nova.objects.instance.Instance
         """
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def resume(self, context, instance, network_info, block_device_info=None):
@@ -808,7 +808,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def check_can_live_migrate_source(self, context, instance,
-                                      dest_check_data, block_device_info=None):
+                                      dest_check_data):
         """Check if it is possible to execute live migration.
 
         This checks if the live migration can succeed, based on the
@@ -817,7 +817,6 @@ class ComputeDriver(object):
         :param context: security context
         :param instance: nova.db.sqlalchemy.models.Instance
         :param dest_check_data: result of check_can_live_migrate_destination
-        :param block_device_info: result of _get_instance_block_device_info
         :returns: a dict containing migration info (hypervisor-dependent)
         """
         raise NotImplementedError()

@@ -22,7 +22,6 @@ from nova.i18n import _
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.hyperv import constants
-from nova.virt.hyperv import vmutils
 
 LOG = logging.getLogger(__name__)
 
@@ -39,8 +38,6 @@ hyperv_opts = [
 CONF = cfg.CONF
 CONF.register_opts(hyperv_opts, 'hyperv')
 CONF.import_opt('instances_path', 'nova.compute.manager')
-
-ERROR_INVALID_NAME = 123
 
 
 class PathUtils(object):
@@ -107,22 +104,11 @@ class PathUtils(object):
                                create_dir=True, remove_dir=False):
         instances_path = self.get_instances_dir(remote_server)
         path = os.path.join(instances_path, dir_name)
-        try:
-            if remove_dir:
-                self._check_remove_dir(path)
-            if create_dir:
-                self._check_create_dir(path)
-            return path
-        except WindowsError as ex:
-            if ex.winerror == ERROR_INVALID_NAME:
-                raise vmutils.HyperVException(_(
-                    "Cannot access \"%(instances_path)s\", make sure the "
-                    "path exists and that you have the proper permissions. "
-                    "In particular Nova-Compute must not be executed with the "
-                    "builtin SYSTEM account or other accounts unable to "
-                    "authenticate on a remote host.") %
-                    {'instances_path': instances_path})
-            raise
+        if remove_dir:
+            self._check_remove_dir(path)
+        if create_dir:
+            self._check_create_dir(path)
+        return path
 
     def get_instance_migr_revert_dir(self, instance_name, create_dir=False,
                                      remove_dir=False):
@@ -164,9 +150,8 @@ class PathUtils(object):
         instance_path = self.get_instance_dir(instance_name)
         return os.path.join(instance_path, 'root.' + format_ext.lower())
 
-    def get_configdrive_path(self, instance_name, format_ext,
-                             remote_server=None):
-        instance_path = self.get_instance_dir(instance_name, remote_server)
+    def get_configdrive_path(self, instance_name, format_ext):
+        instance_path = self.get_instance_dir(instance_name)
         return os.path.join(instance_path, 'configdrive.' + format_ext.lower())
 
     def get_ephemeral_vhd_path(self, instance_name, format_ext):
@@ -186,12 +171,3 @@ class PathUtils(object):
                                              remote_server)
         console_log_path = os.path.join(instance_dir, 'console.log')
         return console_log_path, console_log_path + '.1'
-
-    def copy_configdrive(self, instance_name, dest_host):
-        local_configdrive_path = self.get_configdrive_path(
-                        instance_name, constants.IDE_DVD_FORMAT)
-        remote_configdrive_path = self.get_configdrive_path(
-                instance_name, constants.IDE_DVD_FORMAT,
-                remote_server=dest_host)
-        self.copyfile(local_configdrive_path,
-                                 remote_configdrive_path)

@@ -707,8 +707,7 @@ class Controller(wsgi.Controller):
                     msg = _("Invalid fixed IP address (%s)") % request.address
                     raise exc.HTTPBadRequest(explanation=msg)
 
-                # duplicate networks are allowed only for neutron v2.0
-                if (not utils.is_neutron() and request.network_id and
+                if (request.network_id and
                         request.network_id in network_uuids):
                     expl = (_("Duplicate networks"
                               " (%s) are not allowed") %
@@ -783,6 +782,13 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
         server_dict = body['server']
         password = self._get_server_admin_password(server_dict)
+
+        if server_dict.has_key("metadata"):
+            if server_dict["metadata"]:
+                LOG.info("metadata......................%s" % server_dict["metadata"])
+                if server_dict["metadata"].has_key("load_vcenter_vm"):
+                    context.load_vcenter_vm = "True"
+                    context.uuid = server_dict["metadata"]["uuid"]
 
         if 'name' not in server_dict:
             msg = _("Server name is not defined")

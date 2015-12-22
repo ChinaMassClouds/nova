@@ -108,7 +108,7 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     # The name is the unique identifier for the VM. This will either be the
     # instance UUID or the instance UUID with suffix '-rescue' for VM's that
     # are in rescue mode
-    config_spec.instanceUuid = name
+    config_spec.instanceUuid = instance.uuid
 
     # Allow nested ESX instances to host 64 bit VMs.
     if os_type == "vmkernel5Guest":

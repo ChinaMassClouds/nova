@@ -62,10 +62,8 @@ opts = [
     cfg.StrOpt('admin_username',
                help='Ironic keystone admin name'),
     cfg.StrOpt('admin_password',
-               secret=True,
                help='Ironic keystone admin password.'),
     cfg.StrOpt('admin_auth_token',
-               secret=True,
                help='Ironic keystone auth token.'),
     cfg.StrOpt('admin_url',
                help='Keystone public API endpoint.'),
@@ -910,7 +908,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         ports = icli.call("node.list_ports", node.uuid)
 
         if len(network_info) > len(ports):
-            raise exception.VirtualInterfacePlugException(_(
+            raise exception.NovaException(_(
                 "Ironic node: %(id)s virtual to physical interface count"
                 "  missmatch"
                 " (Vif count: %(vif_count)d, Pif count: %(pif_count)d)")

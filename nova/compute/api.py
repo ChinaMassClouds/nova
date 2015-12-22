@@ -1300,7 +1300,12 @@ class API(base.Base):
         if not instance.obj_attr_is_set('uuid'):
             # Generate the instance_uuid here so we can use it
             # for additional setup before creating the DB entry.
-            instance['uuid'] = str(uuid.uuid4())
+            if hasattr(context, 'load_vcenter_vm'):
+                LOG.info("load_vcenter_vm........................................")
+                instance['uuid'] = context.uuid
+            else:
+                LOG.info("common_vm........................................")
+                instance['uuid'] = str(uuid.uuid4())
 
         instance.launch_index = index
         instance.vm_state = vm_states.BUILDING
@@ -2048,17 +2053,8 @@ class API(base.Base):
         :returns: A dict containing image metadata
         """
         props_copy = dict(extra_properties, backup_type=backup_type)
-
-        if self.is_volume_backed_instance(context, instance):
-            # TODO(flwang): The log level will be changed to INFO after
-            # string freeze (Liberty).
-            LOG.debug("It's not supported to backup volume backed instance.",
-                      context=context, instance=instance)
-            raise exception.InvalidRequest()
-        else:
-            image_meta = self._create_image(context, instance,
-                                            name, 'backup',
-                                            extra_properties=props_copy)
+        image_meta = self._create_image(context, instance, name,
+                                       'backup', extra_properties=props_copy)
 
         # NOTE(comstud): Any changes to this method should also be made
         # to the backup_instance() method in nova/cells/messaging.py
@@ -3391,13 +3387,9 @@ class HostAPI(base.Base):
         service.save()
         return service
 
-    def _service_delete(self, context, service_id):
-        """Performs the actual Service deletion operation."""
-        objects.Service.get_by_id(context, service_id).destroy()
-
     def service_delete(self, context, service_id):
         """Deletes the specified service."""
-        self._service_delete(context, service_id)
+        objects.Service.get_by_id(context, service_id).destroy()
 
     def instance_get_all_by_host(self, context, host_name):
         """Return all instances on the given host."""

@@ -43,8 +43,9 @@ class ComputeFilter(filters.BaseHostFilter):
                        'reason': service.get('disabled_reason')})
             return False
         else:
-            if not self.servicegroup_api.service_is_up(service):
-                LOG.warn(_LW("%(host_state)s has not been heard from in a "
-                             "while"), {'host_state': host_state})
-                return False
+            #if not self.servicegroup_api.service_is_up(service):
+            #    LOG.warn(_LW("%(host_state)s has not been heard from in a "
+            #                 "while"), {'host_state': host_state})
+            #    return False
+            return True
         return True

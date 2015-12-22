@@ -29,7 +29,6 @@ from nova.openstack.common import log as logging
 from nova.virt.baremetal import db
 
 ironic_client = importutils.try_import('ironicclient.client')
-ironic_exc = importutils.try_import('ironicclient.exc')
 
 authorize = extensions.extension_authorizer('compute', 'baremetal_nodes')
 
@@ -192,9 +191,9 @@ class BareMetalNodeController(wsgi.Controller):
                         'interfaces': [],
                         'host': 'IRONIC MANAGED',
                         'task_state': inode.provision_state,
-                        'cpus': inode.properties.get('cpus', 0),
-                        'memory_mb': inode.properties.get('memory_mb', 0),
-                        'disk_gb': inode.properties.get('local_gb', 0)}
+                        'cpus': inode.properties['cpus'],
+                        'memory_mb': inode.properties['memory_mb'],
+                        'disk_gb': inode.properties['local_gb']}
                 nodes.append(node)
         else:
             # use nova baremetal
@@ -217,19 +216,15 @@ class BareMetalNodeController(wsgi.Controller):
         if _use_ironic():
             # proxy command to Ironic
             icli = _get_ironic_client()
-            try:
-                inode = icli.node.get(id)
-            except ironic_exc.NotFound:
-                msg = _("Node %s could not be found.") % id
-                raise webob.exc.HTTPNotFound(explanation=msg)
+            inode = icli.node.get(id)
             iports = icli.node.list_ports(id)
             node = {'id': inode.uuid,
                     'interfaces': [],
                     'host': 'IRONIC MANAGED',
                     'task_state': inode.provision_state,
-                    'cpus': inode.properties.get('cpus', 0),
-                    'memory_mb': inode.properties.get('memory_mb', 0),
-                    'disk_gb': inode.properties.get('local_gb', 0),
+                    'cpus': inode.properties['cpus'],
+                    'memory_mb': inode.properties['memory_mb'],
+                    'disk_gb': inode.properties['local_gb'],
                     'instance_uuid': inode.instance_uuid}
             for port in iports:
                 node['interfaces'].append({'address': port.address})

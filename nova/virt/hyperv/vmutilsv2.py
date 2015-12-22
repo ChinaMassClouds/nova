@@ -78,9 +78,7 @@ class VMUtilsV2(vmutils.VMUtils):
         for vs in self._conn.Msvm_VirtualSystemSettingData(
                 ['ElementName', 'Notes'],
                 VirtualSystemType=self._VIRTUAL_SYSTEM_TYPE_REALIZED):
-            if vs.Notes is not None:
-                instance_notes.append(
-                    (vs.ElementName, [v for v in vs.Notes if v]))
+            instance_notes.append((vs.ElementName, [v for v in vs.Notes if v]))
 
         return instance_notes
 
@@ -91,25 +89,12 @@ class VMUtilsV2(vmutils.VMUtils):
                     ['ElementName'],
                     VirtualSystemType=self._VIRTUAL_SYSTEM_TYPE_REALIZED)]
 
-    def _create_vm_obj(self, vs_man_svc, vm_name, notes, dynamic_memory_ratio,
-                       instance_path):
+    def _create_vm_obj(self, vs_man_svc, vm_name, notes):
         vs_data = self._conn.Msvm_VirtualSystemSettingData.new()
         vs_data.ElementName = vm_name
         vs_data.Notes = notes
         # Don't start automatically on host boot
         vs_data.AutomaticStartupAction = self._AUTOMATIC_STARTUP_ACTION_NONE
-
-        # vNUMA and dynamic memory are mutually exclusive
-        if dynamic_memory_ratio > 1:
-            vs_data.VirtualNumaEnabled = False
-
-        # Created VMs must have their *DataRoot paths in the same location as
-        # the instances' path.
-        vs_data.ConfigurationDataRoot = instance_path
-        vs_data.LogDataRoot = instance_path
-        vs_data.SnapshotDataRoot = instance_path
-        vs_data.SuspendDataRoot = instance_path
-        vs_data.SwapFileDataRoot = instance_path
 
         (job_path,
          vm_path,

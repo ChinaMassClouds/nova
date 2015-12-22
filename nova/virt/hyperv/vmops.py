@@ -278,9 +278,7 @@ class VMOps(object):
             if configdrive.required_by(instance):
                 configdrive_path = self._create_config_drive(instance,
                                                              injected_files,
-                                                             admin_password,
-                                                             network_info)
-
+                                                             admin_password)
                 self.attach_config_drive(instance, configdrive_path)
 
             self.power_on(instance)
@@ -291,14 +289,12 @@ class VMOps(object):
     def create_instance(self, instance, network_info, block_device_info,
                         root_vhd_path, eph_vhd_path):
         instance_name = instance['name']
-        instance_path = os.path.join(CONF.instances_path, instance_name)
 
         self._vmutils.create_vm(instance_name,
                                 instance['memory_mb'],
                                 instance['vcpus'],
                                 CONF.hyperv.limit_cpu_features,
                                 CONF.hyperv.dynamic_memory_ratio,
-                                instance_path,
                                 [instance['uuid']])
 
         ctrl_disk_addr = 0
@@ -335,8 +331,7 @@ class VMOps(object):
 
         self._create_vm_com_port_pipe(instance)
 
-    def _create_config_drive(self, instance, injected_files, admin_password,
-                             network_info):
+    def _create_config_drive(self, instance, injected_files, admin_password):
         if CONF.config_drive_format != 'iso9660':
             raise vmutils.UnsupportedConfigDriveFormatException(
                 _('Invalid config_drive_format "%s"') %
@@ -350,8 +345,7 @@ class VMOps(object):
 
         inst_md = instance_metadata.InstanceMetadata(instance,
                                                      content=injected_files,
-                                                     extra_md=extra_md,
-                                                     network_info=network_info)
+                                                     extra_md=extra_md)
 
         instance_path = self._pathutils.get_instance_dir(
             instance['name'])
@@ -632,8 +626,8 @@ class VMOps(object):
         remote_log_paths = self._pathutils.get_vm_console_log_paths(
             vm_name, remote_server=dest_host)
 
-        for local_log_path, remote_log_path in zip(local_log_paths,
-                                                   remote_log_paths):
+        for local_log_path, remote_log_path in (local_log_paths,
+                                                remote_log_paths):
             if self._pathutils.exists(local_log_path):
                 self._pathutils.copy(local_log_path,
                                      remote_log_path)

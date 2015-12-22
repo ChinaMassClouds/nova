@@ -236,26 +236,30 @@ class VMwareVCDriver(driver.ComputeDriver):
         off the instance before the end.
         """
         # TODO(PhilDay): Add support for timeout (clean shutdown)
-        return self._vmops.migrate_disk_and_power_off(context, instance,
-                                                      dest, flavor)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        return _vmops.migrate_disk_and_power_off(context, instance,
+                                                 dest, flavor)
 
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
-        self._vmops.confirm_migration(migration, instance, network_info)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.confirm_migration(migration, instance, network_info)
 
     def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):
         """Finish reverting a resize, powering back on the instance."""
-        self._vmops.finish_revert_migration(context, instance, network_info,
-                                            block_device_info, power_on)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.finish_revert_migration(context, instance, network_info,
+                                       block_device_info, power_on)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
         """Completes a resize, turning on the migrated instance."""
-        self._vmops.finish_migration(context, migration, instance, disk_info,
-                                     network_info, image_meta, resize_instance,
-                                     block_device_info, power_on)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.finish_migration(context, migration, instance, disk_info,
+                                network_info, image_meta, resize_instance,
+                                block_device_info, power_on)
 
     def live_migration(self, context, instance, dest,
                        post_method, recover_method, block_migration=False,
@@ -280,7 +284,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         """Return link to instance's VNC console using vCenter logic."""
         # vCenter does not actually run the VNC service
         # itself. You must talk to the VNC host underneath vCenter.
-        return self._vmops.get_vnc_console(instance)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        return _vmops.get_vnc_console(instance)
 
     def _update_resources(self):
         """This method creates a dictionary of VMOps, VolumeOps and VCState.
@@ -367,13 +372,27 @@ class VMwareVCDriver(driver.ComputeDriver):
         return resource['vcstate']
 
     def _get_available_resources(self, host_stats):
-        return {'vcpus': host_stats['vcpus'],
-               'memory_mb': host_stats['host_memory_total'],
-               'local_gb': host_stats['disk_total'],
+        #return {'vcpus': host_stats['vcpus'],
+        #       'memory_mb': host_stats['host_memory_total'],
+        #       'local_gb': host_stats['disk_total'],
+        #       'vcpus_used': 0,
+        #       'memory_mb_used': host_stats['host_memory_total'] -
+        #                         host_stats['host_memory_free'],
+        #       'local_gb_used': host_stats['disk_used'],
+        #       'hypervisor_type': host_stats['hypervisor_type'],
+        #       'hypervisor_version': host_stats['hypervisor_version'],
+        #       'hypervisor_hostname': host_stats['hypervisor_hostname'],
+        #       'cpu_info': jsonutils.dumps(host_stats['cpu_info']),
+        #       'supported_instances': jsonutils.dumps(
+        #           host_stats['supported_instances']),
+        #       'numa_topology': None,
+        #       }
+        return {'vcpus': 100,
+               'memory_mb': 25600,
+               'local_gb': 10000,
                'vcpus_used': 0,
-               'memory_mb_used': host_stats['host_memory_total'] -
-                                 host_stats['host_memory_free'],
-               'local_gb_used': host_stats['disk_used'],
+               'memory_mb_used': 0,
+               'local_gb_used': 0,
                'hypervisor_type': host_stats['hypervisor_type'],
                'hypervisor_version': host_stats['hypervisor_version'],
                'hypervisor_hostname': host_stats['hypervisor_hostname'],
@@ -437,9 +456,17 @@ class VMwareVCDriver(driver.ComputeDriver):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         """Create VM instance."""
+#         if hasattr(context, 'load_vcenter_vm'):
+#             LOG.info("not creating.................................")
+#             return
+        if instance.metadata.has_key("load_vcenter_vm") and instance.metadata["load_vcenter_vm"]:
+            return
+
+        LOG.info("instance creating.................................%s" % instance.metadata)
+        
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.spawn(context, instance, image_meta, injected_files,
-              admin_password, network_info, block_device_info)
+              admin_password, network_info, block_device_info, instance.display_name)
 
     def attach_volume(self, context, connection_info, instance, mountpoint,
                       disk_bus=None, device_type=None, encryption=None):
@@ -459,7 +486,8 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def get_volume_connector(self, instance):
         """Return volume connector information."""
-        return self._volumeops.get_volume_connector(instance)
+        _volumeops = self._get_volumeops_for_compute_node(instance['node'])
+        return _volumeops.get_volume_connector(instance)
 
     def get_host_ip_addr(self):
         """Returns the IP address of the vCenter host."""
@@ -467,12 +495,14 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance."""
-        self._vmops.snapshot(context, instance, image_id, update_task_state)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.snapshot(context, instance, image_id, update_task_state)
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
         """Reboot VM instance."""
-        self._vmops.reboot(instance, network_info)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.reboot(instance, network_info)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None):
@@ -483,59 +513,78 @@ class VMwareVCDriver(driver.ComputeDriver):
         # node is not set in instance. Perform destroy only if node is set
         if not instance['node']:
             return
+        
+        if instance.metadata.has_key("load_vcenter_vm") and instance.metadata["load_vcenter_vm"]:
+            return
 
-        self._vmops.destroy(instance, destroy_disks)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.destroy(instance, destroy_disks)
 
     def pause(self, instance):
         """Pause VM instance."""
-        self._vmops.pause(instance)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.pause(instance)
 
     def unpause(self, instance):
         """Unpause paused VM instance."""
-        self._vmops.unpause(instance)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.unpause(instance)
 
-    def suspend(self, context, instance):
+    def suspend(self, instance):
         """Suspend the specified instance."""
-        self._vmops.suspend(instance)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.suspend(instance)
 
     def resume(self, context, instance, network_info, block_device_info=None):
         """Resume the suspended VM instance."""
-        self._vmops.resume(instance)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.resume(instance)
 
     def rescue(self, context, instance, network_info, image_meta,
                rescue_password):
         """Rescue the specified instance."""
-        self._vmops.rescue(context, instance, network_info, image_meta)
+        _vmops = self._get_vmops_for_compute_node(instance.node)
+        _vmops.rescue(context, instance, network_info, image_meta)
 
     def unrescue(self, instance, network_info):
         """Unrescue the specified instance."""
-        self._vmops.unrescue(instance)
+        _vmops = self._get_vmops_for_compute_node(instance.node)
+        _vmops.unrescue(instance)
 
     def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance."""
         # TODO(PhilDay): Add support for timeout (clean shutdown)
-        self._vmops.power_off(instance)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.power_off(instance)
 
     def power_on(self, context, instance, network_info,
                  block_device_info=None):
         """Power on the specified instance."""
-        self._vmops.power_on(instance)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.power_on(instance)
 
     def poll_rebooting_instances(self, timeout, instances):
         """Poll for rebooting instances."""
-        self._vmops.poll_rebooting_instances(timeout, instances)
+        for instance in instances:
+            _vmops = self._get_vmops_for_compute_node(instance['node'])
+            _vmops.poll_rebooting_instances(timeout, [instance])
 
     def get_info(self, instance):
         """Return info about the VM instance."""
-        return self._vmops.get_info(instance)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        return _vmops.get_info(instance)
 
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics."""
-        return self._vmops.get_diagnostics(instance)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        data = _vmops.get_diagnostics(instance)
+        return data
 
     def get_instance_diagnostics(self, instance):
         """Return data about VM diagnostics."""
-        return self._vmops.get_instance_diagnostics(instance)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        data = _vmops.get_instance_diagnostics(instance)
+        return data
 
     def host_power_action(self, host, action):
         """Host operations not supported by VC driver.
@@ -568,7 +617,8 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def inject_network_info(self, instance, nw_info):
         """inject network info for specified instance."""
-        self._vmops.inject_network_info(instance, nw_info)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.inject_network_info(instance, nw_info)
 
     def manage_image_cache(self, context, all_instances):
         """Manage the local cache of images."""
@@ -591,15 +641,18 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def instance_exists(self, instance):
         """Efficient override of base instance_exists method."""
-        return self._vmops.instance_exists(instance)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        return _vmops.instance_exists(instance)
 
     def attach_interface(self, instance, image_meta, vif):
         """Attach an interface to the instance."""
-        self._vmops.attach_interface(instance, image_meta, vif)
+        _vmops = self._get_vmops_for_compute_node(instance.node)
+        _vmops.attach_interface(instance, image_meta, vif)
 
     def detach_interface(self, instance, vif):
         """Detach an interface from the instance."""
-        self._vmops.detach_interface(instance, vif)
+        _vmops = self._get_vmops_for_compute_node(instance.node)
+        _vmops.detach_interface(instance, vif)
 
 
 class VMwareAPISession(api.VMwareAPISession):

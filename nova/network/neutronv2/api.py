@@ -197,8 +197,7 @@ class API(base_api.NetworkAPI):
         """
         try:
             if fixed_ip:
-                port_req_body['port']['fixed_ips'] = [
-                    {'ip_address': str(fixed_ip)}]
+                port_req_body['port']['fixed_ips'] = [{'ip_address': fixed_ip}]
             port_req_body['port']['network_id'] = network_id
             port_req_body['port']['admin_state_up'] = True
             port_req_body['port']['tenant_id'] = instance['project_id']
@@ -243,7 +242,7 @@ class API(base_api.NetworkAPI):
                 # Perform this check here rather than in validate_networks to
                 # ensure the check is performed every time
                 # allocate_for_instance is invoked
-                if net.get('router:external') and not net.get('shared'):
+                if net.get('router:external'):
                     raise exception.ExternalNetworkAttachForbidden(
                         network_uuid=net['id'])
 
@@ -1365,11 +1364,6 @@ class API(base_api.NetworkAPI):
         for current_neutron_port in current_neutron_ports:
             current_neutron_port_map[current_neutron_port['id']] = (
                 current_neutron_port)
-
-        # In that case we should repopulate ports from the state of
-        # Neutron.
-        if not port_ids:
-            port_ids = current_neutron_port_map.keys()
 
         for port_id in port_ids:
             current_neutron_port = current_neutron_port_map.get(port_id)

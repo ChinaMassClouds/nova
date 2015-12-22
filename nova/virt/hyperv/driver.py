@@ -106,7 +106,7 @@ class HyperVDriver(driver.ComputeDriver):
     def unpause(self, instance):
         self._vmops.unpause(instance)
 
-    def suspend(self, context, instance):
+    def suspend(self, instance):
         self._vmops.suspend(instance)
 
     def resume(self, context, instance, network_info, block_device_info=None):
@@ -169,7 +169,7 @@ class HyperVDriver(driver.ComputeDriver):
             context, dest_check_data)
 
     def check_can_live_migrate_source(self, context, instance,
-                                      dest_check_data, block_device_info=None):
+                                      dest_check_data):
         return self._livemigrationops.check_can_live_migrate_source(
             context, instance, dest_check_data)
 

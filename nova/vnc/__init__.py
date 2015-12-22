@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (c) 2010 OpenStack Foundation
 # All Rights Reserved.
 #
